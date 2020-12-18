@@ -69,6 +69,7 @@ def broeg2005(
     tolerance=1e-8,
     n_comps=500,
     exclude=None,
+    sigclip=3,
 ):
 
     np.seterr(divide="ignore")  # Ignore divide by 0 warnings here
@@ -78,8 +79,15 @@ def broeg2005(
     else:
         _exclude = []
 
+    _time = np.arange(fluxes.shape[-1])
+
     original_fluxes = fluxes.copy()
     initial_n_stars = np.shape(original_fluxes)[1]
+
+    if sigclip is not None:
+        bad_flux = np.abs(original_fluxes - np.nanmean(original_fluxes, 2)[:, :, None]) >\
+                   sigclip * np.nanstd(original_fluxes, 2)[:, :, None]
+        original_fluxes[bad_flux] = np.repeat(np.nanmean(original_fluxes, 2)[:, :, None], len(_time), -1)[bad_flux]
 
     # Normalization
     # -------------
@@ -219,6 +227,11 @@ def broeg2005(
     }
 
     return lcs, lcs_errors, info
+
+
+def to_xarray(time, fluxes, errors):
+    pass
+
 
 
 class Fluxes:
