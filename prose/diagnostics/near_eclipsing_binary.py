@@ -1,16 +1,14 @@
-from prose.blocks.registration import distances
+from ..blocks.registration import distances
 import numpy as np
 import matplotlib.pyplot as plt
-from astropy.io import fits
-from prose import utils
+from .. import utils
 import matplotlib.patches as mpatches
-import prose.visualisation as viz
+from .. import visualisation as viz
 import os
 from os import path
 import shutil
-from prose import Observation
+from ..observation import Observation
 from astropy.time import Time
-from astropy import units as u
 from prose.models import transit
 
 

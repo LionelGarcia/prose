@@ -2,8 +2,9 @@ from skimage.measure import label, regionprops
 import numpy as np
 from photutils import DAOStarFinder
 from astropy.stats import sigma_clipped_stats
-from .registration import clean_stars_positions
+from .registration import clean_stars_positions, distances
 from .base import Block
+
 try:
     from sep import extract
 except:
@@ -14,7 +15,7 @@ from astropy.io import fits
 class StarsDetection(Block):
     """Base class for stars detection.
     """
-    def __init__(self, n_stars=None, sort=True, min_separation=None, check_nans=False, **kwargs):
+    def __init__(self, n_stars=None, sort=True, min_separation=None, check_nans=False, cross_match=None, **kwargs):
         super().__init__(**kwargs)
         self.n_stars = n_stars
         self.sort = sort
@@ -22,6 +23,7 @@ class StarsDetection(Block):
         self.last_coords = None
 
         self.check_nans = check_nans
+        self.cross_match = cross_match
 
     def single_detection(self, data):
         """
@@ -40,6 +42,10 @@ class StarsDetection(Block):
                 coordinates = coordinates[0:self.n_stars]
             if self.min_separation is not None:
                 coordinates = clean_stars_positions(coordinates, tolerance=self.min_separation)
+            if self.cross_match is not None:
+                _coordinates = self.cross_match
+                _coordinates[np.array(distances(_coordinates.T, coordinates.T)).argmin(0)] = coordinates
+                coordinates = _coordinates
 
             image.stars_coords = coordinates
             self.last_coords = coordinates

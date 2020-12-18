@@ -57,8 +57,8 @@ class FilesDataFrame:
         self.sort_by_date()
 
     def sort_by_date(self):
-        if "date" in self.files_df:
-            self.sort_by("date")
+        if "jd" in self.files_df:
+            self.sort_by("jd")
 
     def sort_by(self, field, inplace=True):
         if field in self.files_df:
@@ -172,6 +172,7 @@ class FitsManager(FilesDataFrame):
         assert self.unique_obs, "observation should be unique, please use set_observation"
         obs = self._observations.loc[0]
         self.telescope = Telescope.from_name(obs.telescope)
+        self.sort_by_date()
 
     def get_observation(self, i, future=0, past=None, same_telescope=False):
 

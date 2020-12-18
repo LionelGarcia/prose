@@ -6,6 +6,7 @@ from astropy.io import fits
 from ..console_utils import INFO_LABEL
 import numpy as np
 import time
+from ..diagnostics.show_stars import ShowStars
 
 
 class Reduction:
@@ -39,6 +40,7 @@ class Reduction:
             flats=None,
             bias=None,
             darks=None,
+            alignment=blocks.XYShift,
             psf=blocks.FastGaussian,
             ignore_telescope=False):
 
@@ -71,6 +73,9 @@ class Reduction:
         assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
         self.psf = psf
 
+        assert alignment is None or issubclass(alignment, Block), "alignment must be a subclass of Block"
+        self.alignment = alignment
+
     def run(self):
 
         self.reference_unit = Unit([
@@ -91,12 +96,13 @@ class Reduction:
             blocks.Trim(name="trimming", skip_wcs=True),
             blocks.Flip(ref_image, name="flip"),
             blocks.SegmentedPeaks(n_stars=50, name="detection"),
-            blocks.XYShift(ref_image.stars_coords, name="shift"),
+            self.alignment(ref_image.stars_coords, name="shift"),
             blocks.Align(ref_image.data, name="alignment"),
             self.psf(name="fwhm"),
             blocks.Stack(self.stack_path, header=ref_image.header, overwrite=self.overwrite, name="stack"),
             blocks.SaveReduced(self.destination, overwrite=self.overwrite, name="saving"),
-            blocks.Video(self.gif_path, name="video", from_fits=True)
+            ShowStars(),
+            blocks.Video(self.gif_path, name="video", from_fits=False)
         ], self.files, telescope=self.fits_manager.telescope, name="Reduction")
 
         self.reduction_unit.run()
@@ -172,6 +178,7 @@ class Photometry:
                  stack=None,
                  overwrite=False,
                  n_stars=500,
+                 detection=blocks.Pass,
                  psf=blocks.Gaussian2D,
                  ignore_telescope=False):
 
@@ -196,6 +203,9 @@ class Photometry:
 
         assert psf is None or issubclass(psf, Block), "psf must be a subclass of Block"
         self.psf = psf
+
+        assert detection is None or issubclass(detection, Block), "psf must be a subclass of Block"
+        self.detection = detection(cross_match=True)
 
     def run_reference_detection(self):
         self.reference_detection_unit = Unit([
@@ -321,7 +331,8 @@ class AperturePhotometry(Photometry):
                  psf=blocks.Gaussian2D,
                  photometry=blocks.PhotutilsAperturePhotometry,
                  centroid=None,
-                 ignore_telescope=False):
+                 ignore_telescope=False,
+                 detection=blocks.Pass):
                  
         if apertures is None:
             apertures = np.arange(0.1, 10, 0.25)
@@ -333,7 +344,8 @@ class AperturePhotometry(Photometry):
             overwrite=overwrite,
             n_stars=n_stars,
             psf=psf,
-            ignore_telescope= ignore_telescope
+            ignore_telescope= ignore_telescope,
+            detection=detection
         )
 
         # Blocks
@@ -348,15 +360,17 @@ class AperturePhotometry(Photometry):
             sigclip=sigclip,
             fwhm_scale=fwhm_scale,
             name="photometry",
-            set_once=True
+            set_once=isinstance(self.detection, blocks.Pass)
         )
 
     def run_reference_detection(self):
         stack_image, ref_stars, fwhm = super().run_reference_detection()
+        self.detection.cross_match = ref_stars
 
         self.photometry_unit = Unit([
             blocks.Set(stars_coords=ref_stars, name="set stars"),
             blocks.Set(fwhm=fwhm, name="set fwhm"),
+            self.detection,
             blocks.Pass() if not isinstance(self.centroid, Block) else self.centroid,
             self.photometry,
             bio.SavePhot(self.phot_path, header=stack_image.header, stack=stack_image.data, name="saving")

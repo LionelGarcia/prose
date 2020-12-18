@@ -238,18 +238,22 @@ class AstroAlignShift(Registration):
     Compute the linear shift between point clouds using :code:`astroalign`
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, reference_stars, **kwargs):
         super().__init__(**kwargs)
         self.reference_invariants = None
         self.reference_asterisms = None
+        self.set_reference(reference_stars)
 
-    def set_reference(self, reference_image):
-        print("AstroAlignShift overide detection method")
-        self.reference_stars = astroalign._find_sources(
-            reference_image)[:astroalign.MAX_CONTROL_POINTS]
+    def set_reference(self, reference_stars):
+        print("AstroAlignShift overwrites detection method")
+        self.reference_stars = reference_stars[:, astroalign.MAX_CONTROL_POINTS]
         self.reference_invariants, self.reference_asterisms = astroalign._generate_invariants(
             self.reference_stars)
-    
+
+        # self.reference.stars_coords = self.reference.stars_coords[:astroalign.MAX_CONTROL_POINTS]
+        # self.reference_invariants, self.reference_asterisms = astroalign._generate_invariants(
+        #     self.reference.stars_coords)
+
     def run(self, image, **kwargs):
         transform, _detected_stars = astroalign_optimized_find_transform(
                     image.stars_coords,

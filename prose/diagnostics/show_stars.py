@@ -10,7 +10,7 @@ class ShowStars(Block):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def run(self, image):
+    def run(self, image, **kwargs):
         fig = viz.fancy_show_stars(image.data, image.stars_coords)
         canvas = FigureCanvas(fig)
         canvas.draw()
