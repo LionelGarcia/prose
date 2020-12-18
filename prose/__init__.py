@@ -7,9 +7,9 @@ from . import config
 CONFIG = config.ConfigManager()
 
 
-import prose.visualisation as viz
+from . import visualisation as viz
 
-from .io import FitsManager
+from .io.fitsmanager import FitsManager
 from .fluxes import Fluxes, LightCurves
 from .telescope import Telescope
 from .blocks.base import Block, Unit, Image
